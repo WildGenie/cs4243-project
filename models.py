@@ -23,9 +23,7 @@ class DoodleMLP(nn.Module):
         # x = self.bn2(x)
         x = self.dropout(x)
         x = self.l3(x)
-        if return_feats:
-            return x, feat
-        return x
+        return (x, feat) if return_feats else x
 
 class RealMLP(nn.Module):
     def __init__(self, in_dim, hid_dim, out_dim, dropout=0.2):
@@ -56,9 +54,7 @@ class RealMLP(nn.Module):
         x = self.bn3(x)
         # x = self.dropout(x)
         x = self.l4(x)
-        if return_feats:
-            return x, feat
-        return x
+        return (x, feat) if return_feats else x
 
 
 class ExampleMLP(nn.Module):
@@ -82,10 +78,7 @@ class ExampleMLP(nn.Module):
         x = self.dropout(x)
         x = self.l4(x)
 
-        if return_feats:
-            return x, feat
-
-        return x
+        return (x, feat) if return_feats else x
 
 
 
@@ -123,10 +116,7 @@ class V2ConvNet(nn.Module):
         feats = self.layers(x).flatten(1)
         x = self.nn(self.dropout(feats))
 
-        if return_feats:
-            return x, feats
-
-        return x
+        return (x, feats) if return_feats else x
 
 
 class MLP(nn.Module):
@@ -144,9 +134,7 @@ class MLP(nn.Module):
         x = self.relu(self.l2(x))
         x = self.relu(self.l3(x))
         x = self.relu(self.l4(x))
-        out = torch.softmax(self.l5(x), 1)
-
-        return out
+        return torch.softmax(self.l5(x), 1)
 
 
 class CNN(nn.Module):
@@ -171,9 +159,7 @@ class CNN(nn.Module):
         x = self.relu(self.l1(x))
         x = self.relu(self.l2(x))
         x = self.relu(self.l3(x))
-        out = torch.softmax(self.l4(x), 1)
-
-        return out
+        return torch.softmax(self.l4(x), 1)
 
 
 class LayerNorm(nn.Module):
@@ -216,9 +202,7 @@ class ConvNeXtBlock(nn.Module):
         x = self.lin2(x)
         x = self.gelu(x)
         x = x.permute(0, 3, 1, 2)  # NHWC -> NCHW
-        out = x + res_inp
-
-        return out
+        return x + res_inp
 
 
 class ConvNeXt(nn.Module):

@@ -90,5 +90,4 @@ class Similarity:
         with torch.no_grad():
             preds1, feats1 = dmodel(self.x1, return_feat=True)
             preds2, feats2 = rmodel(self.x2, return_feat=True)
-        sims = print_similarity(feats1, feats2, self.y, classes)
-        return sims
+        return print_similarity(feats1, feats2, self.y, classes)

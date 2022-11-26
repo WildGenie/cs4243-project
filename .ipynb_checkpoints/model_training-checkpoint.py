@@ -13,7 +13,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 classes = ['airplane', 'bird', 'car', 'cat', 'dog', 'frog', 'horse', 'ship', 'truck']
-idx2class = {i: c for i, c in enumerate(classes)}
+idx2class = dict(enumerate(classes))
 class2idx = {c: i for i, c in enumerate(classes)}
 
 def labelled_dataset(d):
@@ -36,12 +36,14 @@ class DoodleDataset(Dataset):
         X, Y = labelled_dataset(d)
         return X, Y
     def get_transforms(self, size):
-        T = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(size),
-            transforms.ToTensor(),
-            transforms.Normalize((self.X/255).mean(), (self.X/255).std())])
-        return T
+        return transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Resize(size),
+                transforms.ToTensor(),
+                transforms.Normalize((self.X / 255).mean(), (self.X / 255).std()),
+            ]
+        )
     def __getitem__(self, idx):
         return self.T(self.X[idx]), self.Y[idx]
     def __len__(self):
@@ -58,13 +60,17 @@ class RealDataset(Dataset):
         X, Y = labelled_dataset(d)
         return X, Y
     def get_transforms(self, size):
-        T = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(size),
-            transforms.ToTensor(),
-            transforms.Normalize((self.X/255).mean(axis=(0, 1, 2)),
-                                 (self.X/255).std(axis=(0, 1, 2)))])
-        return T
+        return transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Resize(size),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    (self.X / 255).mean(axis=(0, 1, 2)),
+                    (self.X / 255).std(axis=(0, 1, 2)),
+                ),
+            ]
+        )
     def __getitem__(self, idx):
         return self.T(self.X[idx]), self.Y[idx]
     def __len__(self):
@@ -192,9 +198,7 @@ class MLP(nn.Module):
     def forward(self, x, return_feat=False):
         feat = self.layers[:-1](x.flatten(1))
         x = self.layers[-1](feat)
-        if return_feat:
-            return x, feat
-        return x
+        return (x, feat) if return_feat else x
 
 
 def convbn(in_channels, out_channels, kernel_size, stride, padding, bias):
@@ -225,18 +229,17 @@ class CNN(nn.Module):
     def forward(self, x, return_feat=False):
         feats = self.layers(x).flatten(1)
         x = self.nn(self.dropout(feats))
-        if return_feat:
-            return x, feats
-        return x
+        return (x, feats) if return_feat else x
     
 def compute_sim_matrix(feats):
     """
     Takes in a batch of features of size (bs, feat_len).
     """
-    sim_matrix = F.cosine_similarity(feats.unsqueeze(2).expand(-1, -1, feats.size(0)),
-                                     feats.unsqueeze(2).expand(-1, -1, feats.size(0)).transpose(0, 2),
-                                     dim=1)
-    return sim_matrix
+    return F.cosine_similarity(
+        feats.unsqueeze(2).expand(-1, -1, feats.size(0)),
+        feats.unsqueeze(2).expand(-1, -1, feats.size(0)).transpose(0, 2),
+        dim=1,
+    )
 
 
 def compute_target_matrix(labels):
@@ -245,8 +248,7 @@ def compute_target_matrix(labels):
     """
     label_matrix = labels.unsqueeze(-1).expand((labels.shape[0], labels.shape[0]))
     trans_label_matrix = torch.transpose(label_matrix, 0, 1)
-    target_matrix = (label_matrix == trans_label_matrix).type(torch.float)
-    return target_matrix
+    return (label_matrix == trans_label_matrix).type(torch.float)
 
 
 def contrastive_loss(pred_sim_matrix, target_matrix, temperature):
@@ -257,8 +259,7 @@ def contrastive_loss(pred_sim_matrix, target_matrix, temperature):
 def compute_contrastive_loss_from_feats(feats, labels, temperature):
     sim_matrix = compute_sim_matrix(feats)
     target_matrix = compute_target_matrix(labels)
-    loss = contrastive_loss(sim_matrix, target_matrix, temperature)
-    return loss
+    return contrastive_loss(sim_matrix, target_matrix, temperature)
 
 class CNNCL(nn.Module):
     def __init__(self,
@@ -284,10 +285,12 @@ class CNNCL(nn.Module):
         cont_loss1 = compute_contrastive_loss_from_feats(feat1, y, self.t)
         cont_loss2 = compute_contrastive_loss_from_feats(feat2, y, self.t)
         cont_loss3 = compute_contrastive_loss_from_feats(feat1*feat2, y, self.t)
-        loss = (xent_loss1 + xent_loss2 
-                + self.c1 * (cont_loss1 + cont_loss2)
-                + self.c2 * cont_loss3)
-        return loss
+        return (
+            xent_loss1
+            + xent_loss2
+            + self.c1 * (cont_loss1 + cont_loss2)
+            + self.c2 * cont_loss3
+        )
 
     
 class Trainer:
@@ -325,7 +328,7 @@ class Trainer:
         doodle_acc = AverageMeter()
         real_acc = AverageMeter()
         if not self.contrastive:
-            for i, (x, y) in enumerate(self.train_loader):
+            for x, y in self.train_loader:
                 x, y = x.cuda(), y.cuda()
                 pred = self.model(x)
                 loss = self.xent(pred, y)
@@ -336,7 +339,7 @@ class Trainer:
                 avg_loss.update(loss.item())
                 avg_acc.update(acc)
         else:
-            for i, (x1, x2, y) in enumerate(self.train_loader):
+            for x1, x2, y in self.train_loader:
                 x1, x2, y = x1.cuda(), x2.cuda(), y.cuda()
                 pred1, feat1, pred2, feat2 = self.model(x1, x2)
                 loss = self.model.module.loss(pred1, feat1, pred2, feat2, y)
@@ -358,7 +361,7 @@ class Trainer:
         doodle_acc = AverageMeter()
         real_acc = AverageMeter()
         if not self.contrastive:
-            for i, (x, y) in enumerate(self.val_loader):
+            for x, y in self.val_loader:
                 x, y = x.cuda(), y.cuda()
                 with torch.no_grad():
                     pred, feat = self.model(x, return_feat=True)
@@ -368,7 +371,7 @@ class Trainer:
                 avg_loss.update(loss.item())
                 avg_acc.update(acc)
         else:
-            for i, (x1, x2, y) in enumerate(self.val_loader):
+            for x1, x2, y in self.val_loader:
                 x1, x2, y = x1.cuda(), x2.cuda(), y.cuda()
                 with torch.no_grad():
                     pred1, feat1, pred2, feat2 = self.model(x1, x2)
@@ -474,8 +477,7 @@ class ConvNeXtBlock(nn.Module):
         x = self.conv3(x)
         x = self.gelu(x)
         res_inp = self.conv_res(res_inp)
-        out = x + res_inp
-        return out
+        return x + res_inp
 
 class ConvNeXt(nn.Module):
     FIRST_BLOCK_DIM = 96
@@ -502,9 +504,7 @@ class ConvNeXt(nn.Module):
         feats = self.pool(feats).flatten(1)
         x = feats
         out = self.project(x)
-        if return_feat:
-            return out, feats
-        return out
+        return (out, feats) if return_feat else out
 
 class ConvNextCL(nn.Module):
     def __init__(self,
@@ -529,10 +529,12 @@ class ConvNextCL(nn.Module):
         cont_loss1 = compute_contrastive_loss_from_feats(feat1, y, self.t)
         cont_loss2 = compute_contrastive_loss_from_feats(feat2, y, self.t)
         cont_loss3 = compute_contrastive_loss_from_feats(feat1*feat2, y, self.t)
-        loss = (xent_loss1 + xent_loss2 
-                + self.c1 * (cont_loss1 + cont_loss2)
-                + self.c2 * cont_loss3)
-        return loss
+        return (
+            xent_loss1
+            + xent_loss2
+            + self.c1 * (cont_loss1 + cont_loss2)
+            + self.c2 * cont_loss3
+        )
 
 
 class ConvNeXtBlock2(nn.Module):
@@ -553,8 +555,7 @@ class ConvNeXtBlock2(nn.Module):
         x = self.lin2(x)
         x = self.gelu(x)
         x = x.permute(0, 3, 1, 2)  # NHWC -> NCHW
-        out = x + res_inp
-        return out
+        return x + res_inp
 
 class ConvNeXt2(nn.Module):
     def __init__(self, n_channels, n_classes=9, block_dims=[192, 384, 768]):
@@ -576,9 +577,7 @@ class ConvNeXt2(nn.Module):
         x = self.blocks(x)
         feats = self.flatten(x)
         out = self.project(feats)
-        if return_feat:
-            return out, feats
-        return out
+        return (out, feats) if return_feat else out
     
 class ConvNextCL2(nn.Module):
     def __init__(self,
@@ -604,7 +603,9 @@ class ConvNextCL2(nn.Module):
         cont_loss1 = compute_contrastive_loss_from_feats(feat1, y, self.t)
         cont_loss2 = compute_contrastive_loss_from_feats(feat2, y, self.t)
         cont_loss3 = compute_contrastive_loss_from_feats(feat1*feat2, y, self.t)
-        loss = (xent_loss1 + xent_loss2 
-                + self.c1 * (cont_loss1 + cont_loss2)
-                + self.c2 * cont_loss3)
-        return loss
+        return (
+            xent_loss1
+            + xent_loss2
+            + self.c1 * (cont_loss1 + cont_loss2)
+            + self.c2 * cont_loss3
+        )

@@ -12,7 +12,7 @@ import cv2
 
 def plot_dataset_dist(d, title="untitled"):
     plt.title(title)
-    plt.bar([c for c in d.keys()], [x.shape[0] for x in d.values()])
+    plt.bar(list(d.keys()), [x.shape[0] for x in d.values()])
     plt.show()
     
     

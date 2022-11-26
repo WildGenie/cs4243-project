@@ -31,9 +31,7 @@ class CNN(nn.Module):
     def forward(self, x, return_feats=False):
         feats = self.layers(x).flatten(1)
         x = self.nn(self.dropout(feats))
-        if return_feats:
-            return x, feats
-        return x        
+        return (x, feats) if return_feats else x        
 
 doodle_model = CNN(1, 9)
 real_model = CNN(3, 9)

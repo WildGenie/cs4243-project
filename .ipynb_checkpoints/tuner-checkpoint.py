@@ -20,19 +20,12 @@ class Tuner:
         the other hparams to be picked.
         '''
 
-        others = {}
-        for hparam, values in temp_config.items():
-            others[hparam] = values[0]
-
-        return others
+        return {hparam: values[0] for hparam, values in temp_config.items()}
 
     def tune(self):
         config_cp = copy.deepcopy(self.config)
 
-        final_set = {}
-        for hparam, _ in config_cp.items():
-            final_set[hparam] = None
-
+        final_set = {hparam: None for hparam, _ in config_cp.items()}
         all_histories = {}
         for hparam, values in self.config.items():
             print ("Currently tuning : ", hparam)
@@ -41,11 +34,8 @@ class Tuner:
             best_acc = float('-inf')
             best_choice = None
 
-            if best_choice == None:
-                current_hparams = self.set_other_hparams(config_cp)
-            else:
-                current_hparams = self.set_other_hparams(config_cp)
-
+            current_hparams = self.set_other_hparams(config_cp)
+            if best_choice != None:
                 # set the existing best hparams into the new config
                 for done_hparam, val in final_set.items():
                     current_hparams[done_hparam] = val
@@ -79,7 +69,7 @@ class Tuner:
                 plt.plot(metadata['epochs'], metadata['val_acc'], label=repr(choice))
 
             plt.legend()
-            plt.title("Sensitivity of {} on Validation Accuracy".format(hparam))
+            plt.title(f"Sensitivity of {hparam} on Validation Accuracy")
             plt.show()
 
     def ablate_hparam_train_losses(self, all_histories):
@@ -89,5 +79,5 @@ class Tuner:
                 plt.plot(metadata['epochs'], metadata['train_loss'], label=repr(choice))
 
             plt.legend()
-            plt.title("Sensitivity of {} on Validation Accuracy".format(hparam))
+            plt.title(f"Sensitivity of {hparam} on Validation Accuracy")
             plt.show()

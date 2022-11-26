@@ -13,7 +13,7 @@ from train import train_inet, train_decision
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=f'Training INet models')
+    parser = argparse.ArgumentParser(description='Training INet models')
     parser.add_argument('--model', type=str, help='the cuda devices used for training',
                         choices=['inet, lstm, decision'], default='decision')
     parser.add_argument('--modes', type=int, help='number of modes', default=4)
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 
     # basic training setup
     writer = SummaryWriter(os.path.join(args.exp_log_path, 'board'))
-    exp_dir = f'exp_data/inet'
+    exp_dir = 'exp_data/inet'
     os.makedirs(args.exp_log_path, exist_ok=True)
     train_anno_path = os.path.join(args.dataset_path, 'train.txt')
     val_anno_path = os.path.join(args.dataset_path, 'test.txt')

@@ -61,15 +61,15 @@ def dataset_exists(f):
     return os.path.isfile(f)
     
 classes = ['airplane', 'bird', 'car', 'cat', 'dog', 'frog', 'horse', 'ship', 'truck']
-idx2class = {i: c for i, c in enumerate(classes)}
+idx2class = dict(enumerate(classes))
 class2idx = {c: i for i, c in enumerate(classes)}
 
 def get_cifar(f='dataset/cifar'):
-    if dataset_exists(f + '/cifar.npy'):
-        return load_dataset(f + '/cifar.npy')
+    if dataset_exists(f'{f}/cifar.npy'):
+        return load_dataset(f'{f}/cifar.npy')
     trainset = torchvision.datasets.CIFAR10(root='./dataset', train=True, download=True)
     testset = torchvision.datasets.CIFAR10(root='./dataset', train=False, download=True)
-    
+
     cifar = {}
     idx_to_class = {v:k for k,v in trainset.class_to_idx.items()}
     for idx, clas in idx_to_class.items():
@@ -103,8 +103,8 @@ def print_dataset(d):
     print("Dataset size:", size)
     
 def get_quickdraw(f='dataset/quickdraw', n=50000):
-    if dataset_exists(f + '/quickdraw.npy'):
-        return load_dataset(f + '/quickdraw.npy')
+    if dataset_exists(f'{f}/quickdraw.npy'):
+        return load_dataset(f'{f}/quickdraw.npy')
     categories = ['airplane', 'bird', 'car', 'cat', 'dog', 'frog', 'horse', 'cruise ship', 'truck']
     quickdraw = {}
     for c in categories:
@@ -116,8 +116,8 @@ def get_quickdraw(f='dataset/quickdraw', n=50000):
     return quickdraw
 
 def get_sketchy_real(f='dataset/sketchy'):
-    if dataset_exists(f + '/sketchy_real.npy'):
-        return load_dataset(f + '/sketchy_real.npy')
+    if dataset_exists(f'{f}/sketchy_real.npy'):
+        return load_dataset(f'{f}/sketchy_real.npy')
     sketchy_categories = ['airplane', 'songbird', 'wading_bird', 'car_(sedan)', 'cat', 'dog', 'frog', 'horse', 'pickup_truck']
     info = [
         'invalid-ambiguous.txt',
@@ -129,7 +129,7 @@ def get_sketchy_real(f='dataset/sketchy'):
     for i in info:
         with open(f'{f}/info/{i}', 'r') as file:
             remove += file.read().splitlines()
-            
+
     sketchy_real = {}
     for c in sketchy_categories:
         imgs = []
@@ -153,8 +153,8 @@ def get_sketchy_real(f='dataset/sketchy'):
     return sketchy_real
 
 def get_sketchy_doodle(f='dataset/sketchy'):
-    if dataset_exists(f + '/sketchy_doodle.npy'):
-        return load_dataset(f + '/sketchy_doodle.npy')
+    if dataset_exists(f'{f}/sketchy_doodle.npy'):
+        return load_dataset(f'{f}/sketchy_doodle.npy')
     sketchy_categories = ['airplane', 'songbird', 'wading_bird', 'car_(sedan)', 'cat', 'dog', 'frog', 'horse', 'pickup_truck']
     info = [
         'invalid-ambiguous.txt',
@@ -187,14 +187,12 @@ def get_sketchy_doodle(f='dataset/sketchy'):
     return sketchy_doodle
 
 def get_tuberlin(f='dataset/tuberlin'):
-    if dataset_exists(f + '/tuberlin.npy'):
-        return load_dataset(f + '/tuberlin.npy')
+    if dataset_exists(f'{f}/tuberlin.npy'):
+        return load_dataset(f'{f}/tuberlin.npy')
     tuberlin_categories = ['airplane', 'flying bird', 'standing bird', 'car (sedan)', 'race car', 'cat', 'dog', 'frog', 'horse', 'pickup truck', 'truck']
     tuberlin = {}
     for c in tuberlin_categories:
-        imgs = []
-        for file in glob.glob(f"{f}/{c}/*.png"):
-            imgs.append(imageio.imread(file))
+        imgs = [imageio.imread(file) for file in glob.glob(f"{f}/{c}/*.png")]
         if c == 'car (sedan)':
             tuberlin['car'] = np.asarray(imgs)
         elif c == 'race car':
@@ -233,30 +231,30 @@ def train_test_split(d, split=0.8, shuffle=True):
 
 
 def get_all_datasets():
-    dd = {
+    return {
         'cifar': get_cifar(),
         'quickdraw': get_quickdraw(),
         'sketchy_real': get_sketchy_real(),
         'sketchy_doodle': get_sketchy_doodle(),
         'tuberlin': get_tuberlin(),
         'google_doodles': get_google_doodles(),
-        'google_real': get_google_real()}
-    return dd
+        'google_real': get_google_real(),
+    }
 
 def get_doodle_datasets():
-    dd = {
+    return {
         # 'quickdraw': get_quickdraw(),
         'sketchy_doodle': get_sketchy_doodle(),
         'tuberlin': get_tuberlin(),
-        'google_doodles': get_google_doodles()}
-    return dd
+        'google_doodles': get_google_doodles(),
+    }
 
 def get_real_datasets():
-    dd = {
+    return {
         'cifar': get_cifar(),
         'sketchy_real': get_sketchy_real(),
-        'google_real': get_google_real()}
-    return dd
+        'google_real': get_google_real(),
+    }
 
 def collapse_datasets(dd, res=64, split=0):
     """
@@ -268,27 +266,28 @@ def collapse_datasets(dd, res=64, split=0):
         for c, data in d.items():
             if c not in cd:
                 cd[c] = []
-            resized = []
-            for img in data:
-                resized.append(cv2.resize(img, (res, res), interpolation=cv2.INTER_AREA))
+            resized = [
+                cv2.resize(img, (res, res), interpolation=cv2.INTER_AREA)
+                for img in data
+            ]
+
             resized = np.stack(resized, axis=0)
             cd[c].append(resized)
     for c, lst_data in cd.items():
         cd[c] = np.concatenate(lst_data, axis=0)
     if not split:
         return cd
-    else:
-        traind, testd = {}, {}
-        for c, data in cd.items():
-            n = int(split * len(data))
-            traind[c] = data[:n]
-            testd[c] = data[n:]
-        return traind, testd
+    traind, testd = {}, {}
+    for c, data in cd.items():
+        n = int(split * len(data))
+        traind[c] = data[:n]
+        testd[c] = data[n:]
+    return traind, testd
               
               
 def get_sketchy_pairs(f='dataset/sketchy', split=0.8):
-    if dataset_exists(f + '/sketchy_pairs.npy'):
-        return load_dataset(f + '/sketchy_pairs.npy')
+    if dataset_exists(f'{f}/sketchy_pairs.npy'):
+        return load_dataset(f'{f}/sketchy_pairs.npy')
     sketchy2class = {
         'airplane': 'airplane',
         'songbird': 'bird',
@@ -303,9 +302,11 @@ def get_sketchy_pairs(f='dataset/sketchy', split=0.8):
     def check_real(url):
         assert url[-4:] == '.jpg'
         assert '-' not in url
+
     def check_doodle(url):
         assert url[-4:] == '.png'
         assert '-' in url
+
     sketchy_categories = ['airplane', 'songbird', 'wading_bird', 'car_(sedan)', 'cat', 'dog', 'frog', 'horse', 'pickup_truck']
     info = [
         'invalid-ambiguous.txt',
