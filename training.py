@@ -39,7 +39,7 @@ def train_model(model1, model2, train_set, val_set, tqdm_on, id, num_epochs, bat
         model1.train()
         model2.train()
         pg = tqdm(train_loader, leave=False, total=len(train_loader), disable=not tqdm_on)
-        for i, (x1, y1, x2, y2) in enumerate(pg):
+        for x1, y1, x2, y2 in pg:
             # doodle, label, real, label
             x1, y1, x2, y2 = x1.cuda(), y1.cuda(), x2.cuda(), y2.cuda()
 
@@ -96,7 +96,7 @@ def train_model(model1, model2, train_set, val_set, tqdm_on, id, num_epochs, bat
         acc_model1.reset(), acc_model2.reset()
         pg = tqdm(val_loader, leave=False, total=len(val_loader), disable=not tqdm_on)
         with torch.no_grad():
-            for i, (x1, y1, x2, y2) in enumerate(pg):
+            for x1, y1, x2, y2 in pg:
                 pred1, feats1 = model1(x1, return_feats=True)
                 pred2, feats2 = model2(x2, return_feats=True)
                 acc_model1.update(compute_accuracy(pred1, y1))
@@ -113,7 +113,7 @@ def train_model(model1, model2, train_set, val_set, tqdm_on, id, num_epochs, bat
 
         scheduler.step()
 
-    print(f'training finished')
+    print('training finished')
 
     # save checkpoint
     exp_dir = f'exp_data/{id}'

@@ -28,10 +28,7 @@ class V1MLP(nn.Module):
         x = self.dropout(x)
         x = self.l3(x)
 
-        if return_feats:
-            return x, feat
-
-        return x
+        return (x, feat) if return_feats else x
 
     def train_epoch(self, train_loader):
         pass
@@ -44,10 +41,10 @@ class V2ConvNet(nn.Module):
         pool_option = config['pool_option']
         hidden = config['hidden_dim']
         dropout = config['dropout']
-        
+
         layer1 = nn.Conv2d(in_c, channel_list[0], kernel_size=3)
         layers = [layer1]
-        
+
         for i in range(1, len(channel_list)):
             layers.append(
                 nn.Conv2d(channel_list[i-1], channel_list[i], kernel_size=3, stride=2, padding=1, bias=True)
@@ -59,11 +56,11 @@ class V2ConvNet(nn.Module):
                 nn.Dropout(dropout)
             )
             layers.append(nn.ReLU())
-            
+
         self.conv = nn.Sequential(*layers)
-        
+
         self.flatten = nn.AdaptiveAvgPool2d(pool_option)
-            
+
         self.fc = nn.Sequential(*[
             nn.Linear(pool_option[0] * pool_option[1] * channel_list[-1], hidden),
             nn.Linear(hidden, num_classes)
@@ -74,14 +71,10 @@ class V2ConvNet(nn.Module):
         x = x.view(x.size(0), 512, -1).mean(2)
         x = self.fc(x)
 
-        if return_feats:
-            return x, feats
-
-        return x
+        return (x, feats) if return_feats else x
 
     def train_epoch(self, train_loader, optimizer, loss_fn, ):
-        for idx, (x, y) in enumerate(train_loader):
-            
+        for x, y in train_loader:
             pred = self(x, y)
 
     def evaluate(self, val_loader):
@@ -114,12 +107,12 @@ class Trainer:
             history["val_acc"].append(epoch_val_acc)
 
             if verbose:
-                print ("Epoch: {} | Train Loss: {} | Val Acc: {}".format(epoch, epoch_train_loss, epoch_val_acc))
+                print(
+                    f"Epoch: {epoch} | Train Loss: {epoch_train_loss} | Val Acc: {epoch_val_acc}"
+                )
+
 
         avg_loss = total_loss / self.nepochs
         avg_acc = total_acc / self.nepochs
 
-        if return_history:
-            return avg_acc, avg_loss, history
-
-        return avg_acc, avg_loss
+        return (avg_acc, avg_loss, history) if return_history else (avg_acc, avg_loss)

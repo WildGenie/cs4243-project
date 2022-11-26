@@ -13,9 +13,11 @@ def combined_dataset(datasets, size):
             if class_name not in combined_dataset:
                 combined_dataset[class_name] = []
             # resize data so they can be stacked
-            resized = []
-            for data in class_data:
-                resized.append(cv2.resize(data, (size, size), interpolation=cv2.INTER_AREA))
+            resized = [
+                cv2.resize(data, (size, size), interpolation=cv2.INTER_AREA)
+                for data in class_data
+            ]
+
             resized = np.stack(resized, axis=0)
             combined_dataset[class_name].append(resized)
     for class_name, lst_datasets in combined_dataset.items():
@@ -37,8 +39,10 @@ class ImageDataset(Dataset):
         self.real_dict = combined_dataset(real_datasets, real_size)
 
         # sanity check
-        assert set(self.doodle_dict.keys()) == set(self.real_dict.keys()), \
-            f'doodle and real images label classes do not match'
+        assert set(self.doodle_dict.keys()) == set(
+            self.real_dict.keys()
+        ), 'doodle and real images label classes do not match'
+
 
         # process classes
         label_idx = {}

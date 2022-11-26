@@ -15,9 +15,9 @@ def get_CAM(feature_map, weight, class_idx):
     cam = cam - torch.min(cam)
     cam = cam / torch.max(cam)
     cam = torch.clip(cam, 0, 1)
-    
+
     img = transforms.Resize(size_upsample)(cam.unsqueeze(0))
-    
+
     return img.detach().numpy(), cam
 
 def plot_cam(img, cam, ALLCLASSES):

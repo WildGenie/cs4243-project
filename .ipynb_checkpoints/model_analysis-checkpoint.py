@@ -43,19 +43,18 @@ class GradCAMUtil:
     def visualise_single(self, img, tensor, model, layer, target):
         cam = GradCAM(model, [layer])
         overlay = cam(torch.unsqueeze(tensor, axis=0), [ClassifierOutputTarget(target)])[0,:]
-        vis = show_cam_on_image(img/255, overlay, use_rgb=True)
-        return vis    
+        return show_cam_on_image(img/255, overlay, use_rgb=True)    
        
     def visualise_random_batch(self, model, n=10):
         tensors, targets = next(iter(self.loader))
         imgs = self.d.X
-        
+
         random_idx = torch.randint(0, self.bs, (n,1))
-        
+
         tensors = tensors[random_idx]
         targets = targets[random_idx]
         imgs = imgs[random_idx]
-        
+
         convs = []
         for layer in model.children():
             if isinstance(layer, nn.Conv2d):
@@ -71,12 +70,12 @@ class GradCAMUtil:
                             elif isinstance(la, nn.Sequential):
                                 raise Exception()
         layers = convs
-        
+
         for i in range(n):
             fig = plt.figure(figsize=(20, 16))
-            
+
             for j, layer in enumerate([None] + layers):
-                if layer == None:
+                if layer is None:
                     plt.subplot(1, len(layers)+1, j+1)
                     plt.imshow(imgs[i].squeeze(0))
                     plt.title("Original")
@@ -84,6 +83,6 @@ class GradCAMUtil:
                     vis = self.visualise_single(imgs[i].squeeze(0), tensors[i].squeeze(0), model, layer, targets[i].item())
                     plt.subplot(1, len(layers)+1, j+1)
                     plt.imshow(vis)
-                    plt.title("Layer {}".format(j+1))
-                    
+                    plt.title(f"Layer {j + 1}")
+
             plt.show()

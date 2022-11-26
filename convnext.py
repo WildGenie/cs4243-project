@@ -118,9 +118,7 @@ class ConvNeXt(nn.Module):
         x = self.forward_features(x)
         feats = x
         x = self.head(x)
-        if return_feat:
-            return x, feats
-        return x
+        return (x, feats) if return_feat else x
 
 
 class LayerNorm(nn.Module):
